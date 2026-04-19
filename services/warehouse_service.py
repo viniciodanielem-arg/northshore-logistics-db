@@ -1,7 +1,7 @@
 from database.db import get_connection
 from utils.logger import log_audit
 
-def add_warehouse(warehouse_name, city, address, manager_name, user_id=1)
+def add_warehouse(warehouse_name, city, address, manager_name, user_id=1):
     if not warehouse_name.strip():
         raise ValueError("Warehouse name is required.")
 
