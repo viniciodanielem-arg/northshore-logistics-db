@@ -24,16 +24,16 @@ def add_customer(customer_name, phone, email, address, user_id=1):
 
     log_audit(user_id, "INSERT", "customers", customer_id, f"Added customer {customer_name}")
 
-    def get_all_customers():
-        conn = get_connection()
-        cursor = conn.cursor()
+def get_all_customers():
+    conn = get_connection()
+    cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT customer_id, customer_name, phone, email
-            FROM customers
-            ORDER BY customer_id DESC
-        """)
+    cursor.execute("""
+        SELECT customer_id, customer_name, phone, email
+        FROM customers
+        ORDER BY customer_id DESC
+    """)
 
-        rows = cursor.fetchall()
-        conn.close()
-        return rows
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
