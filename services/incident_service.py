@@ -2,7 +2,6 @@ from datetime import datetime
 from database.db import get_connection
 from utils.logger import log_audit
 
-
 def add_incident(shipment_id, incident_type, description,
                  reported_by_user_id, resolution_status):
     if not incident_type.strip():
@@ -30,5 +29,25 @@ def add_incident(shipment_id, incident_type, description,
     conn.commit()
     conn.close()
 
-    log_audit(reported_by_user_id, "INSERT", "incident_reports",
-              incident_id, f"Incident added for shipment {shipment_id}")
+    log_audit(
+        reported_by_user_id,
+        "INSERT",
+        "incident_reports",
+        incident_id,
+        f"Incident added for shipment {shipment_id}"
+    )
+
+def get_all_incidents():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT incident_id, shipment_id, incident_type, description,
+               reported_by_user_id, incident_date, resolution_status
+        FROM incident_reports
+        ORDER BY incident_id DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
