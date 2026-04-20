@@ -5,4 +5,4 @@ create_tables()
 seed_roles()
 seed_admin_user()
 
-print("Database, tables, and starter data created successfully.")
+print("Database, tables, roles, and admin user created successfully.")
