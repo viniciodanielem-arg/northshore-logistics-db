@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox
 from typing import Optional
 from tkinter import Entry, Text, Tk
+from tkinter import ttk
+from tkinter.ttk import Combobox
 
 from services.auth_service import login_user, register_user, get_all_users
 from services.customer_service import add_customer, get_all_customers
@@ -54,14 +56,15 @@ warehouse_entry: Optional[Entry] = None
 address_entry: Optional[Entry] = None
 cost_entry: Optional[Entry] = None
 surcharge_entry: Optional[Entry] = None
-payment_entry: Optional[Entry] = None
-
 status_shipment_id_entry: Optional[Entry] = None
-status_entry: Optional[Entry] = None
+
+payment_entry: Optional[Combobox] = None
+status_entry: Optional[Combobox] = None
+filter_status_entry: Optional[Combobox] = None
 
 reg_username_entry: Optional[Entry] = None
 reg_password_entry: Optional[Entry] = None
-reg_role_entry: Optional[Entry] = None
+reg_role_entry: Optional[Combobox] = None
 reg_full_name_entry: Optional[Entry] = None
 reg_email_entry: Optional[Entry] = None
 
@@ -73,15 +76,15 @@ vehicle_reg_entry: Optional[Entry] = None
 vehicle_type_entry: Optional[Entry] = None
 vehicle_capacity_entry: Optional[Entry] = None
 vehicle_maintenance_entry: Optional[Entry] = None
-vehicle_status_entry: Optional[Entry] = None
 vehicle_warehouse_entry: Optional[Entry] = None
 vehicle_update_id_entry: Optional[Entry] = None
-
 vehicle_update_type_entry: Optional[Entry] = None
 vehicle_update_capacity_entry: Optional[Entry] = None
 vehicle_update_maintenance_entry: Optional[Entry] = None
-vehicle_update_status_entry: Optional[Entry] = None
 vehicle_update_warehouse_entry: Optional[Entry] = None
+
+vehicle_status_entry: Optional[Combobox] = None
+vehicle_update_status_entry: Optional[Combobox] = None
 
 delivery_update_id_entry: Optional[Entry] = None
 delivery_update_driver_entry: Optional[Entry] = None
@@ -90,7 +93,7 @@ delivery_update_route_entry: Optional[Entry] = None
 delivery_update_date_entry: Optional[Entry] = None
 delivery_update_dispatch_entry: Optional[Entry] = None
 delivery_update_arrival_entry: Optional[Entry] = None
-delivery_update_status_entry: Optional[Entry] = None
+delivery_update_status_entry: Optional[Combobox] = None
 
 driver_name_entry: Optional[Entry] = None
 driver_phone_entry: Optional[Entry] = None
@@ -98,8 +101,6 @@ driver_license_entry: Optional[Entry] = None
 driver_expiry_entry: Optional[Entry] = None
 driver_notes_entry: Optional[Entry] = None
 driver_shift_entry: Optional[Entry] = None
-
-
 
 inventory_name_entry: Optional[Entry] = None
 inventory_desc_entry: Optional[Entry] = None
@@ -120,26 +121,71 @@ assignment_route_entry: Optional[Entry] = None
 assignment_date_entry: Optional[Entry] = None
 assignment_dispatch_entry: Optional[Entry] = None
 assignment_arrival_entry: Optional[Entry] = None
-assignment_status_entry: Optional[Entry] = None
+assignment_status_entry: Optional[Combobox] = None
 
 incident_shipment_entry: Optional[Entry] = None
 incident_type_entry: Optional[Entry] = None
 incident_desc_entry: Optional[Entry] = None
-incident_status_entry: Optional[Entry] = None
+incident_status_entry: Optional[Combobox] = None
 
 payment_shipment_entry: Optional[Entry] = None
 payment_amount_due_entry: Optional[Entry] = None
 payment_amount_paid_entry: Optional[Entry] = None
 payment_method_entry: Optional[Entry] = None
 payment_date_entry: Optional[Entry] = None
-payment_status_new_entry: Optional[Entry] = None
+payment_status_new_entry: Optional[Combobox] = None
 
 payment_update_id_entry: Optional[Entry] = None
-payment_update_status_entry: Optional[Entry] = None
+payment_update_status_entry: Optional[Combobox] = None
 
 search_order_entry: Optional[Entry] = None
-filter_status_entry: Optional[Entry] = None
 
+
+
+SHIPMENT_STATUS_OPTIONS = [
+    "In Transit",
+    "Delivered",
+    "Delayed",
+    "Returned to Warehouse",
+    "Failed Delivery"
+]
+
+PAYMENT_STATUS_OPTIONS = [
+    "Pending",
+    "Partially Paid",
+    "Paid",
+    "Overdue",
+    "Cancelled"
+]
+
+VEHICLE_STATUS_OPTIONS = [
+    "Available",
+    "In Use",
+    "Under Maintenance",
+    "Out of Service"
+]
+
+ASSIGNMENT_STATUS_OPTIONS = [
+    "Scheduled",
+    "Dispatched",
+    "In Progress",
+    "Completed",
+    "Cancelled"
+]
+
+INCIDENT_STATUS_OPTIONS = [
+    "Open",
+    "Investigating",
+    "Resolved",
+    "Closed"
+]
+
+ROLE_OPTIONS = [
+    "admin",
+    "manager",
+    "warehouse_staff",
+    "driver"
+]
 
 
 def submit_customer():
@@ -190,16 +236,22 @@ def submit_shipment():
 
         require_role(current_user, ["admin", "manager", "warehouse_staff"])
 
+        sender_id = int(sender_entry.get().strip())
+        receiver_id = int(receiver_entry.get().strip())
+        warehouse_id = int(warehouse_entry.get().strip())
+        transport_cost = float(cost_entry.get().strip())
+        surcharge = float(surcharge_entry.get().strip())
+
         add_shipment(
-            order_entry.get(),
-            int(sender_entry.get()),
-            int(receiver_entry.get()),
-            item_entry.get(),
-            int(warehouse_entry.get()),
-            address_entry.get(),
-            float(cost_entry.get()),
-            float(surcharge_entry.get()),
-            payment_entry.get(),
+            order_entry.get().strip(),
+            sender_id,
+            receiver_id,
+            item_entry.get().strip(),
+            warehouse_id,
+            address_entry.get().strip(),
+            transport_cost,
+            surcharge,
+            payment_entry.get().strip(),
             user_id=current_user["user_id"]
         )
         messagebox.showinfo("Success", "Shipment added successfully.")
@@ -983,8 +1035,9 @@ def open_main_window():
     surcharge_entry.grid(row=7, column=1, padx=5, pady=2)
 
     tk.Label(shipment_frame, text="Payment Status").grid(row=8, column=0, sticky="w")
-    payment_entry = tk.Entry(shipment_frame)
+    payment_entry = ttk.Combobox(shipment_frame, values=PAYMENT_STATUS_OPTIONS, state="readonly")
     payment_entry.grid(row=8, column=1, padx=5, pady=2)
+    payment_entry.set(PAYMENT_STATUS_OPTIONS[0])
 
     tk.Button(shipment_frame, text="Add Shipment", command=submit_shipment).grid(
         row=9, column=0, columnspan=2, pady=5
@@ -998,8 +1051,9 @@ def open_main_window():
     status_shipment_id_entry.grid(row=0, column=1, padx=5, pady=2)
 
     tk.Label(status_frame, text="New Status").grid(row=1, column=0, sticky="w")
-    status_entry = tk.Entry(status_frame)
+    status_entry = ttk.Combobox(status_frame, values=SHIPMENT_STATUS_OPTIONS, state="readonly")
     status_entry.grid(row=1, column=1, padx=5, pady=2)
+    status_entry.set(SHIPMENT_STATUS_OPTIONS[0])
 
     tk.Button(status_frame, text="Update Status", command=change_status).grid(
         row=2, column=0, columnspan=2, pady=5
@@ -1025,8 +1079,9 @@ def open_main_window():
     vehicle_maintenance_entry.grid(row=3, column=1, padx=5, pady=2)
 
     tk.Label(vehicle_frame, text="Availability Status").grid(row=4, column=0, sticky="w")
-    vehicle_status_entry = tk.Entry(vehicle_frame)
+    vehicle_status_entry = ttk.Combobox(vehicle_frame, values=VEHICLE_STATUS_OPTIONS, state="readonly")
     vehicle_status_entry.grid(row=4, column=1, padx=5, pady=2)
+    vehicle_status_entry.set(VEHICLE_STATUS_OPTIONS[0])
 
     tk.Label(vehicle_frame, text="Assigned Warehouse ID").grid(row=5, column=0, sticky="w")
     vehicle_warehouse_entry = tk.Entry(vehicle_frame)
@@ -1056,8 +1111,9 @@ def open_main_window():
     vehicle_update_maintenance_entry.grid(row=3, column=1, padx=5, pady=2)
 
     tk.Label(vehicle_update_frame, text="Availability Status").grid(row=4, column=0, sticky="w")
-    vehicle_update_status_entry = tk.Entry(vehicle_update_frame)
+    vehicle_update_status_entry = ttk.Combobox(vehicle_update_frame, values=VEHICLE_STATUS_OPTIONS, state="readonly")
     vehicle_update_status_entry.grid(row=4, column=1, padx=5, pady=2)
+    vehicle_update_status_entry.set(VEHICLE_STATUS_OPTIONS[0])
 
     tk.Label(vehicle_update_frame, text="Assigned Warehouse ID").grid(row=5, column=0, sticky="w")
     vehicle_update_warehouse_entry = tk.Entry(vehicle_update_frame)
@@ -1191,8 +1247,9 @@ def open_main_window():
     assignment_arrival_entry.grid(row=6, column=1, padx=5, pady=2)
 
     tk.Label(assignment_frame, text="Assignment Status").grid(row=7, column=0, sticky="w")
-    assignment_status_entry = tk.Entry(assignment_frame)
+    assignment_status_entry = ttk.Combobox(assignment_frame, values=ASSIGNMENT_STATUS_OPTIONS, state="readonly")
     assignment_status_entry.grid(row=7, column=1, padx=5, pady=2)
+    assignment_status_entry.set(ASSIGNMENT_STATUS_OPTIONS[0])
 
     tk.Button(assignment_frame, text="Assign Delivery", command=submit_delivery_assignment).grid(
         row=8, column=0, columnspan=2, pady=5
@@ -1230,8 +1287,9 @@ def open_main_window():
     delivery_update_arrival_entry.grid(row=6, column=1, padx=5, pady=2)
 
     tk.Label(delivery_update_frame, text="New Status").grid(row=7, column=0, sticky="w")
-    delivery_update_status_entry = tk.Entry(delivery_update_frame)
+    delivery_update_status_entry = ttk.Combobox(delivery_update_frame, values=ASSIGNMENT_STATUS_OPTIONS,state="readonly")
     delivery_update_status_entry.grid(row=7, column=1, padx=5, pady=2)
+    delivery_update_status_entry.set(ASSIGNMENT_STATUS_OPTIONS[0])
 
     tk.Button(
         delivery_update_frame,
@@ -1255,8 +1313,9 @@ def open_main_window():
     incident_desc_entry.grid(row=2, column=1, padx=5, pady=2)
 
     tk.Label(incident_frame, text="Resolution Status").grid(row=3, column=0, sticky="w")
-    incident_status_entry = tk.Entry(incident_frame)
+    incident_status_entry = ttk.Combobox(incident_frame, values=INCIDENT_STATUS_OPTIONS, state="readonly")
     incident_status_entry.grid(row=3, column=1, padx=5, pady=2)
+    incident_status_entry.set(INCIDENT_STATUS_OPTIONS[0])
 
     tk.Button(incident_frame, text="Record Incident", command=submit_incident).grid(
         row=4, column=0, columnspan=2, pady=5
@@ -1271,8 +1330,10 @@ def open_main_window():
     tk.Button(search_frame, text="Search", command=search_shipments).grid(row=0, column=2, padx=5, pady=2)
 
     tk.Label(search_frame, text="Filter by Status").grid(row=1, column=0, sticky="w")
-    filter_status_entry = tk.Entry(search_frame)
+    filter_status_entry = ttk.Combobox(search_frame, values=SHIPMENT_STATUS_OPTIONS, state="readonly")
     filter_status_entry.grid(row=1, column=1, padx=5, pady=2)
+    filter_status_entry.set(SHIPMENT_STATUS_OPTIONS[0])
+
     tk.Button(search_frame, text="Filter", command=filter_shipments).grid(row=1, column=2, padx=5, pady=2)
 
     payment_frame = tk.LabelFrame(top_container, text="Add Payment", padx=10, pady=10)
@@ -1299,8 +1360,9 @@ def open_main_window():
     payment_date_entry.grid(row=4, column=1, padx=5, pady=2)
 
     tk.Label(payment_frame, text="Payment Status").grid(row=5, column=0, sticky="w")
-    payment_status_new_entry = tk.Entry(payment_frame)
+    payment_status_new_entry = ttk.Combobox(payment_frame, values=PAYMENT_STATUS_OPTIONS, state="readonly")
     payment_status_new_entry.grid(row=5, column=1, padx=5, pady=2)
+    payment_status_new_entry.set(PAYMENT_STATUS_OPTIONS[0])
 
     tk.Button(payment_frame, text="Add Payment", command=submit_payment).grid(
         row=6, column=0, columnspan=2, pady=5
@@ -1314,8 +1376,9 @@ def open_main_window():
     payment_update_id_entry.grid(row=0, column=1, padx=5, pady=2)
 
     tk.Label(payment_status_frame, text="New Status").grid(row=1, column=0, sticky="w")
-    payment_update_status_entry = tk.Entry(payment_status_frame)
+    payment_update_status_entry = ttk.Combobox(payment_status_frame, values=PAYMENT_STATUS_OPTIONS, state="readonly")
     payment_update_status_entry.grid(row=1, column=1, padx=5, pady=2)
+    payment_update_status_entry.set(PAYMENT_STATUS_OPTIONS[0])
 
     tk.Button(payment_status_frame, text="Update Payment Status", command=change_payment_status).grid(
         row=2, column=0, columnspan=2, pady=5
@@ -1334,8 +1397,9 @@ def open_main_window():
         reg_password_entry.grid(row=1, column=1, padx=5, pady=2)
 
         tk.Label(users_frame, text="Role").grid(row=2, column=0, sticky="w")
-        reg_role_entry = tk.Entry(users_frame)
+        reg_role_entry = ttk.Combobox(users_frame, values=ROLE_OPTIONS, state="readonly")
         reg_role_entry.grid(row=2, column=1, padx=5, pady=2)
+        reg_role_entry.set(ROLE_OPTIONS[0])
 
         tk.Label(users_frame, text="Full Name").grid(row=3, column=0, sticky="w")
         reg_full_name_entry = tk.Entry(users_frame)

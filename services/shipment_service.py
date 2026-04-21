@@ -2,67 +2,61 @@ from datetime import datetime
 from database.db import get_connection
 from utils.security import simple_encrypt
 from utils.logger import log_audit
-
-
-def record_exists(cursor, table_name, id_field, record_id):
-    query = f"SELECT 1 FROM {table_name} WHERE {id_field} = ?"
-    cursor.execute(query, (record_id,))
-    return cursor.fetchone() is not None
+from utils.validation import (
+    validate_required,
+    validate_positive_number,
+    validate_choice,
+    validate_record_exists,
+    validate_text_length,
+    ALLOWED_SHIPMENT_STATUSES,
+    ALLOWED_PAYMENT_STATUSES
+)
 
 
 def validate_shipment_data(order_number, item_description, transport_cost, surcharge,
-                           sender_customer_id, receiver_customer_id, origin_warehouse_id):
-    if not order_number.strip():
-        return False, "Order number is required."
+                           sender_customer_id, receiver_customer_id,
+                           origin_warehouse_id, destination_address, payment_status):
+    validate_required(order_number, "Order number")
+    validate_required(item_description, "Item description")
+    validate_required(destination_address, "Destination address")
 
-    if not item_description.strip():
-        return False, "Item description is required."
+    validate_text_length(order_number, "Order number", 50)
+    validate_text_length(item_description, "Item description", 255)
+    validate_text_length(destination_address, "Destination address", 255)
 
-    if transport_cost < 0:
-        return False, "Transport cost cannot be negative."
+    validate_positive_number(transport_cost, "Transport cost", allow_zero=True)
+    validate_positive_number(surcharge, "Surcharge", allow_zero=True)
 
-    if surcharge < 0:
-        return False, "Surcharge cannot be negative."
+    validate_record_exists("customers", "customer_id", sender_customer_id, "Sender customer ID")
+    validate_record_exists("customers", "customer_id", receiver_customer_id, "Receiver customer ID")
+    validate_record_exists("warehouses", "warehouse_id", origin_warehouse_id, "Warehouse ID")
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    sender_exists = record_exists(cursor, "customers", "customer_id", sender_customer_id)
-    receiver_exists = record_exists(cursor, "customers", "customer_id", receiver_customer_id)
-    warehouse_exists = record_exists(cursor, "warehouses", "warehouse_id", origin_warehouse_id)
-
-    conn.close()
-
-    if not sender_exists:
-        return False, f"Sender customer ID {sender_customer_id} does not exist."
-
-    if not receiver_exists:
-        return False, f"Receiver customer ID {receiver_customer_id} does not exist."
-
-    if not warehouse_exists:
-        return False, f"Warehouse ID {origin_warehouse_id} does not exist."
-
-    return True, "Valid"
+    validate_choice(payment_status, "Payment status", ALLOWED_PAYMENT_STATUSES)
 
 
 def add_shipment(order_number, sender_customer_id, receiver_customer_id,
                  item_description, origin_warehouse_id, destination_address,
                  transport_cost, surcharge, payment_status, user_id=None):
-    valid, message = validate_shipment_data(
+
+    validate_shipment_data(
         order_number,
         item_description,
         transport_cost,
         surcharge,
         sender_customer_id,
         receiver_customer_id,
-        origin_warehouse_id
+        origin_warehouse_id,
+        destination_address,
+        payment_status
     )
-
-    if not valid:
-        raise ValueError(message)
 
     conn = get_connection()
     cursor = conn.cursor()
+
+    cursor.execute("SELECT shipment_id FROM shipments WHERE order_number = ?", (order_number,))
+    if cursor.fetchone():
+        conn.close()
+        raise ValueError("Order number already exists.")
 
     encrypted_address = simple_encrypt(destination_address)
 
@@ -75,16 +69,16 @@ def add_shipment(order_number, sender_customer_id, receiver_customer_id,
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        order_number,
+        order_number.strip(),
         sender_customer_id,
         receiver_customer_id,
-        item_description,
+        (item_description or "").strip(),
         origin_warehouse_id,
         encrypted_address,
         datetime.now().date().isoformat(),
         "In Transit",
-        transport_cost,
-        surcharge,
+        float(transport_cost),
+        float(surcharge),
         payment_status
     ))
 
@@ -113,12 +107,10 @@ def get_all_shipments():
 
 
 def update_shipment_status(shipment_id, new_status, user_id=None):
-    if not new_status.strip():
-        raise ValueError("New status is required.")
+    validate_choice(new_status, "Shipment status", ALLOWED_SHIPMENT_STATUSES)
 
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("SELECT shipment_id FROM shipments WHERE shipment_id = ?", (shipment_id,))
     shipment = cursor.fetchone()
 

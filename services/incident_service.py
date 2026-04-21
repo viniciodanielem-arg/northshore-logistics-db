@@ -1,11 +1,26 @@
 from datetime import datetime
 from database.db import get_connection
 from utils.logger import log_audit
+from utils.validation import (
+    validate_required,
+    validate_choice,
+    validate_record_exists,
+    validate_text_length,
+    ALLOWED_INCIDENT_STATUSES
+)
+
 
 def add_incident(shipment_id, incident_type, description,
                  reported_by_user_id, resolution_status):
-    if not incident_type.strip():
-        raise ValueError("Incident type is required.")
+
+    validate_record_exists("shipments", "shipment_id", shipment_id, "Shipment ID")
+    validate_record_exists("users", "user_id", reported_by_user_id, "Reported by user ID")
+    validate_required(incident_type, "Incident type")
+    validate_required(description, "Description")
+    validate_choice(resolution_status, "Resolution status", ALLOWED_INCIDENT_STATUSES)
+
+    validate_text_length(incident_type, "Incident type", 100)
+    validate_text_length(description, "Description", 500)
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -18,8 +33,8 @@ def add_incident(shipment_id, incident_type, description,
         VALUES (?, ?, ?, ?, ?, ?)
     """, (
         shipment_id,
-        incident_type,
-        description,
+        incident_type.strip(),
+        (description or "").strip(),
         reported_by_user_id,
         datetime.now().isoformat(),
         resolution_status
@@ -36,6 +51,7 @@ def add_incident(shipment_id, incident_type, description,
         incident_id,
         f"Incident added for shipment {shipment_id}"
     )
+
 
 def get_all_incidents():
     conn = get_connection()
