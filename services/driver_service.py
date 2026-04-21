@@ -1,5 +1,6 @@
 from database.db import get_connection
 from utils.logger import log_audit
+from utils.security import simple_encrypt
 
 
 def add_driver(full_name, phone, license_number, license_expiry,
@@ -12,14 +13,23 @@ def add_driver(full_name, phone, license_number, license_expiry,
     conn = get_connection()
     cursor = conn.cursor()
 
+    encrypted_phone = simple_encrypt(phone)
+    encrypted_license = simple_encrypt(license_number)
+
     cursor.execute("""
-        INSERT INTO drivers (
-            full_name, phone, license_number, license_expiry,
-            route_history_notes, shift_assignment
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (full_name, phone, license_number, license_expiry,
-          route_history_notes, shift_assignment))
+    INSERT INTO drivers (
+        full_name, phone, license_number, license_expiry,
+        route_history_notes, shift_assignment
+    )
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        full_name,
+        encrypted_phone,
+        encrypted_license,
+        license_expiry,
+        route_history_notes,
+        shift_assignment
+    ))
 
     driver_id = cursor.lastrowid
     conn.commit()

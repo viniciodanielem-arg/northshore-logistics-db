@@ -136,3 +136,40 @@ def update_shipment_status(shipment_id, new_status, user_id=None):
     conn.close()
 
     log_audit(user_id, "UPDATE", "shipments", shipment_id, f"Changed status to {new_status}")
+
+def search_shipments_by_order(order_number):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT shipment_id, order_number, sender_customer_id,
+               receiver_customer_id, item_description,
+               origin_warehouse_id, created_date,
+               current_status, transport_cost, surcharge, payment_status
+        FROM shipments
+        WHERE order_number LIKE ?
+        ORDER BY shipment_id DESC
+    """, (f"%{order_number}%",))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def filter_shipments_by_status(status):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT shipment_id, order_number, sender_customer_id,
+               receiver_customer_id, item_description,
+               origin_warehouse_id, created_date,
+               current_status, transport_cost, surcharge, payment_status
+        FROM shipments
+        WHERE current_status = ?
+        ORDER BY shipment_id DESC
+    """, (status,))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
