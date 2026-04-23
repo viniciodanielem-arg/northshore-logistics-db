@@ -13,12 +13,10 @@ def hash_password(password, salt):
 def verify_password(password, salt, stored_hash):
     return hash_password(password, salt) == stored_hash
 
-# Generate a consistent secret key (you can hardcode or store securely)
 SECRET_KEY = "northshore_secure_key_2026"
 
 
 def generate_encryption_key():
-    # Derive a strong key from the secret
     return hashlib.sha256(SECRET_KEY.encode()).digest()
 
 
@@ -34,7 +32,6 @@ def simple_encrypt(text):
         encrypted_char = chr(ord(char) ^ key_char)
         encrypted_chars.append(encrypted_char)
 
-    # Convert to hex so it can be safely stored in DB
     encrypted_string = "".join(encrypted_chars)
     return encrypted_string.encode("utf-8").hex()
 
@@ -45,7 +42,6 @@ def simple_decrypt(encrypted_text):
 
     key = generate_encryption_key()
 
-    # Convert hex back to string
     decoded = bytes.fromhex(encrypted_text).decode("utf-8")
 
     decrypted_chars = []

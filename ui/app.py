@@ -133,10 +133,8 @@ payment_amount_due_entry: Optional[Entry] = None
 payment_amount_paid_entry: Optional[Entry] = None
 payment_method_entry: Optional[Entry] = None
 payment_date_entry: Optional[Entry] = None
-payment_status_new_entry: Optional[Combobox] = None
 
 payment_update_id_entry: Optional[Entry] = None
-payment_update_status_entry: Optional[Combobox] = None
 
 search_order_entry: Optional[Entry] = None
 
@@ -816,41 +814,33 @@ def submit_payment():
     try:
         if current_user is None:
             raise ValueError("No user is currently logged in.")
-
         require_role(current_user, ["admin", "manager", "warehouse_staff"])
-
         add_payment(
             int(payment_shipment_entry.get()),
             float(payment_amount_due_entry.get()),
             float(payment_amount_paid_entry.get()),
             payment_method_entry.get(),
             payment_date_entry.get(),
-            payment_status_new_entry.get(),
             user_id=current_user["user_id"]
         )
-
         messagebox.showinfo("Success", "Payment added successfully.")
     except Exception as e:
         messagebox.showerror("Error", str(e))
+
 
 def change_payment_status():
     global current_user
     try:
         if current_user is None:
             raise ValueError("No user is currently logged in.")
-
         require_role(current_user, ["admin", "manager"])
-
         update_payment_status(
             int(payment_update_id_entry.get()),
-            payment_update_status_entry.get(),
             user_id=current_user["user_id"]
         )
-
-        messagebox.showinfo("Success", "Payment status updated.")
+        messagebox.showinfo("Success", "Payment status updated automatically.")
     except Exception as e:
         messagebox.showerror("Error", str(e))
-
 
 def open_main_window():
     global output_box
@@ -874,8 +864,8 @@ def open_main_window():
     global assignment_arrival_entry, assignment_status_entry
     global incident_shipment_entry, incident_type_entry, incident_desc_entry, incident_status_entry
     global payment_shipment_entry, payment_amount_due_entry, payment_amount_paid_entry
-    global payment_method_entry, payment_date_entry, payment_status_new_entry
-    global payment_update_id_entry, payment_update_status_entry
+    global payment_method_entry, payment_date_entry
+    global payment_update_id_entry
     global search_order_entry, filter_status_entry
     global vehicle_update_id_entry
     global vehicle_update_type_entry, vehicle_update_capacity_entry
@@ -887,9 +877,6 @@ def open_main_window():
 
     if current_user is None:
         raise ValueError("No user is currently logged in.")
-
-    if login_root is not None:
-        login_root.destroy()
 
     root = tk.Tk()
     root.title("Northshore Logistics System")
@@ -1006,7 +993,7 @@ def open_main_window():
     order_entry = tk.Entry(shipment_frame)
     order_entry.grid(row=0, column=1, padx=5, pady=2)
 
-    tk.Label(shipment_frame, text="Sender Customer ID").grid(row=1, column=0, sticky="w")
+    tk.Label(shipment_frame, text="Sender Cusomer ID").grid(row=1, column=0, sticky="w")
     sender_entry = tk.Entry(shipment_frame)
     sender_entry.grid(row=1, column=1, padx=5, pady=2)
 
@@ -1359,13 +1346,8 @@ def open_main_window():
     payment_date_entry = tk.Entry(payment_frame)
     payment_date_entry.grid(row=4, column=1, padx=5, pady=2)
 
-    tk.Label(payment_frame, text="Payment Status").grid(row=5, column=0, sticky="w")
-    payment_status_new_entry = ttk.Combobox(payment_frame, values=PAYMENT_STATUS_OPTIONS, state="readonly")
-    payment_status_new_entry.grid(row=5, column=1, padx=5, pady=2)
-    payment_status_new_entry.set(PAYMENT_STATUS_OPTIONS[0])
-
     tk.Button(payment_frame, text="Add Payment", command=submit_payment).grid(
-        row=6, column=0, columnspan=2, pady=5
+        row=5, column=0, columnspan=2, pady=5
     )
 
     payment_status_frame = tk.LabelFrame(top_container, text="Update Payment Status", padx=10, pady=10)
@@ -1375,13 +1357,8 @@ def open_main_window():
     payment_update_id_entry = tk.Entry(payment_status_frame)
     payment_update_id_entry.grid(row=0, column=1, padx=5, pady=2)
 
-    tk.Label(payment_status_frame, text="New Status").grid(row=1, column=0, sticky="w")
-    payment_update_status_entry = ttk.Combobox(payment_status_frame, values=PAYMENT_STATUS_OPTIONS, state="readonly")
-    payment_update_status_entry.grid(row=1, column=1, padx=5, pady=2)
-    payment_update_status_entry.set(PAYMENT_STATUS_OPTIONS[0])
-
-    tk.Button(payment_status_frame, text="Update Payment Status", command=change_payment_status).grid(
-        row=2, column=0, columnspan=2, pady=5
+    tk.Button(payment_status_frame, text="Recalculate Payment Status", command=change_payment_status).grid(
+        row=1, column=0, columnspan=2, pady=5
     )
 
     if has_role(current_user, ["admin"]):
@@ -1455,37 +1432,50 @@ def open_main_window():
     root.mainloop()
 
 
+
 def attempt_login():
-    global current_user
+    global current_user, login_root
     try:
         if login_username_entry is None or login_password_entry is None:
             raise ValueError("Login form is not ready.")
 
         current_user = login_user(login_username_entry.get(), login_password_entry.get())
         messagebox.showinfo("Success", f"Welcome, {current_user['full_name']}!")
+
+        if login_root is not None:
+            try:
+                login_root.destroy()
+            except tk.TclError:
+                pass
+            login_root = None
+
         open_main_window()
+
     except Exception as e:
         messagebox.showerror("Login Failed", str(e))
 
 
 
-login_root: Tk = tk.Tk()
-login_root.title("Login - Northshore Logistics System")
-login_root.geometry("400x250")
+def open_login_window():
+    global login_root, login_username_entry, login_password_entry
 
-tk.Label(login_root, text="Northshore Logistics Login", font=("Arial", 14, "bold")).pack(pady=15)
+    login_root = tk.Tk()
+    login_root.title("Login - Northshore Logistics System")
+    login_root.geometry("400x250")
 
-login_frame = tk.Frame(login_root)
-login_frame.pack(pady=10)
+    tk.Label(login_root, text="Northshore Logistics Login", font=("Arial", 14, "bold")).pack(pady=15)
 
-tk.Label(login_frame, text="Username").grid(row=0, column=0, padx=5, pady=5)
-login_username_entry: Entry = tk.Entry(login_frame)
-login_username_entry.grid(row=0, column=1, padx=5, pady=5)
+    login_frame = tk.Frame(login_root)
+    login_frame.pack(pady=10)
 
-tk.Label(login_frame, text="Password").grid(row=1, column=0, padx=5, pady=5)
-login_password_entry: Entry = tk.Entry(login_frame, show="*")
-login_password_entry.grid(row=1, column=1, padx=5, pady=5)
+    tk.Label(login_frame, text="Username").grid(row=0, column=0, padx=5, pady=5)
+    login_username_entry = tk.Entry(login_frame)
+    login_username_entry.grid(row=0, column=1, padx=5, pady=5)
 
-tk.Button(login_root, text="Login", command=attempt_login).pack(pady=15)
+    tk.Label(login_frame, text="Password").grid(row=1, column=0, padx=5, pady=5)
+    login_password_entry = tk.Entry(login_frame, show="*")
+    login_password_entry.grid(row=1, column=1, padx=5, pady=5)
 
-login_root.mainloop()
+    tk.Button(login_root, text="Login", command=attempt_login).pack(pady=15)
+
+    login_root.mainloop()
